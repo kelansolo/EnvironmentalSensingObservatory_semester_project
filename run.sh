@@ -1,2 +1,1 @@
-source /home/pi/sequoia-ptpy/env/bin/activate
-exec /home/pi/python sequoia-ptpy/exampls/trigger.py
+exec sudo /home/pi/sequoia-ptpy/env/bin/python examples/trigger.py
