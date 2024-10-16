@@ -6,3 +6,6 @@ cscope.out
 *.egg
 build/*
 dist/*
+Archive/
+.venv311/
+.venv312/
