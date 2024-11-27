@@ -1,22 +1,32 @@
 import signal
 import sys
 import RPi.GPIO as GPIO
+import csv
 from datetime import datetime
+import argparse
 
 
-# BUTTON_GPIO = 23
+parser = argparse.ArgumentParser(
+                    prog='EventLog',
+                    description='Continously log the computertime of all the camera event pulses',
+                    epilog='---')
+
+parser.add_argument('output_dir', type=str)
+args = parser.parse_args()
+event_filename = args.output_dir
+
 BUTTON_GPIO = 23
-
-start_time = datetime.now().strftime('%y%m%d_%H%M%S')
 
 def signal_handler(sig, frame):
     GPIO.cleanup()
     sys.exit(0)
 
 def button_pressed_callback(channel):
+    global event_filename
     event_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-    with open(f'shutter_event_log_{start_time}.txt', 'a') as log_file:
-        log_file.write(f"{event_time}\n")
+    with open(event_filename, 'a', newline='') as log_file:
+        writer = csv.writer(log_file)
+        writer.writerow([event_time])
 
 if __name__ == '__main__':
     
@@ -28,7 +38,7 @@ if __name__ == '__main__':
         signal.pause()
     
     except KeyboardInterrupt:
-        print("keboard int")
+        GPIO.cleanup()
     
     finally:
         GPIO.cleanup()
