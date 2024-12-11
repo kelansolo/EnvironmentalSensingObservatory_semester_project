@@ -1,0 +1,4 @@
+- Update RPI time with gps time at start
+- Hard reset
+- Implement in_box function
+- have a init case

@@ -19,7 +19,5 @@ with camera.session():
 
     # Continuous capture loop
     while True:
-        current_camera_time = camera.get_device_prop_value("DateTime")
-        print("Current camera time:", current_camera_time)
         capture = camera.initiate_capture()
         sleep(2)

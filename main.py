@@ -17,139 +17,107 @@ SYNC_2 = 0x62
 CLASS_ID = 0x0D  # TIM class
 MSG_ID = 0x03    # TM2 message
 
-LED_PIN = 4
+LED_PIN_BLUE = 23
+LED_PIN_RED = 22
 INPUT_PIN = 24
 
 capturing = False
 start_capture = False
 run = False
 stop = False
+error = False
 gps_event_filename = "FILE ERROR"
 rpi_event_filename  = "FILE ERROR"
+UBX_VERSION_QUERY = b'\xb5\x62\x0a\x04\x00\x00\x0e\x34'  # UBX-CFG-POLL for version information
 
-# state = 0
+kml_path = "./map.geo.admin.ch_KML_20241211161754.kml"
+
 gps = serial.Serial(SERIAL_PORT, baudrate = BAUD_RATE, timeout = 0.5)
+
 
 # INIT
 GPIO.setmode(GPIO.BCM)          # Use GPIO pin number
 GPIO.setwarnings(False)         # Ignore warnings in our case
-GPIO.setup(LED_PIN, GPIO.OUT)    # GPIO pin as output pin
+GPIO.setup(LED_PIN_RED, GPIO.OUT)    # GPIO pin as output pin
+GPIO.setup(LED_PIN_BLUE, GPIO.OUT)    # GPIO pin as output pin
 GPIO.setup(INPUT_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)    # GPIO pin as output pin
 
+GPIO.output(LED_PIN_RED, GPIO.LOW)
+GPIO.output(LED_PIN_BLUE, GPIO.LOW)
 
-while True:
-    if input_on(INPUT_PIN) > 0.2: # debounce
-        stop = run
-        run = not run
-    
-    if capturing and stop:
-        print("-----> STOP CAPTURING ")
-        stop = False
-        capturing = False
-        os.system("/home/pi/ESO/shell/stop.sh")
-    
-    elif start_capture and not capturing and not stop:
-        print("-----> START CAPTURE")
-        capturing = True
-        start_capture = False 
+# Test GPS
+if gps.is_open:
+    print("GPS connection is open.")
+    gps.write(UBX_VERSION_QUERY)
+    time.sleep(0.1)
+    response = gps.read(50)  # Read up to 50 bytes of response
+    blink(8,LED_PIN_BLUE,0.1)
+    if response:
+        print(f"GPS is responsive")
+        blink(8, LED_PIN_BLUE, 0.1)
+    else:
+        print("No response from GPS. It may be unplugged or unresponsive.")
+        error = True
+else:
+    print("GPS connection failed to open.")
+    error = True
 
-        start_time = datetime.now().strftime('%y%m%d_%H%M%S')
-        directory = './Data'
-        gps_event_filename = f'{directory}/gpstime_event_log_{start_time}.csv'
-        rpi_event_filename = f'{directory}/shutter_event_log_{start_time}.csv'
-
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        os.system(f"/home/pi/ESO/shell/run.sh {rpi_event_filename}")     
-    
-    if run:
-        data = gps.readline()
-        if capturing and len(data) > 8 and data[0] == SYNC_1 and data[1] == SYNC_2 and data[2] == CLASS_ID and data[3] == MSG_ID:
-            log_gps_event(data, gps_event_filename)
-        elif in_box:
-            start_capture = not capturing
-        else:
-            stop = True
-        
-
-
-            
-
-
-
-
-
-
-
-
-
-
+GPIO.output(LED_PIN_BLUE, GPIO.HIGH)
 
 try:
-    while True:
-        if state == 0: # init
-            print("state: 0")
-            blink(8,LED_PIN,0.1)
-            os.system("/home/pi/ESO/shell/stop.sh")
-            state = next_state(1)
-            print("-----> WAITING FOR INPUT")
-
-        elif state == 1: # Wait for input
-            if GPIO.input(INPUT_PIN) == GPIO.LOW:
-                if detect_button_release(INPUT_PIN):
-                    start_time = datetime.now().strftime('%y%m%d_%H%M%S')
-                    directory = './Data'
-                    gps_filename = f'{directory}/gpstime_event_log_{start_time}.csv'
-                    rpi_event_filename = f'{directory}/shutter_event_log_{start_time}.csv'
-
-                    if not os.path.exists(directory):
-                        os.makedirs(directory)
-
-                    state = next_state(10)
+    while not error:
+        if input_on(INPUT_PIN) > 0.2: # debounce
+            stop = run
+            run = not run
         
-        elif state == 10: # get data
-            data = gps.readline()
-            if capturing == True:
-                state = next_state(20)
-            else:
-                state = next_state(30) #TODO add capturning condition
-            
-
-        elif state == 20: # log event
-            if  len(data) > 8 and data[0] == SYNC_1 and data[1] == SYNC_2 and data[2] == CLASS_ID and data[3] == MSG_ID:
-                tow = decode_tow(data)
-                with open(gps_filename, 'a', newline='') as log_file:
-                    writer = csv.writer(log_file)
-                    writer.writerow(tow)
-            
-            if GPIO.input(INPUT_PIN) == GPIO.LOW:
-                if detect_button_release(INPUT_PIN):
-                    state = next_state(90)
-            
-
-        elif state == 30:
-            os.system(f"/home/pi/ESO/shell/run.sh {rpi_event_filename}")
-            # start_capture = True
-            state = next_state(10)
-            print("-----> CAPTURING ")
-
-        elif state == 3:
-            blink(1,LED_PIN,0.05)
-            for _ in range(20):
-                if GPIO.input(INPUT_PIN) == GPIO.LOW:
-                    if detect_button_release(INPUT_PIN):
-                        state = next_state(90)
-                else:
-                    time.sleep(0.1)
-
-        elif state == 90:
+        if capturing and stop:
             print("-----> STOP CAPTURING ")
+            stop = False
+            capturing = False
             os.system("/home/pi/ESO/shell/stop.sh")
-            state = next_state(0)
+            GPIO.output(LED_PIN_RED, GPIO.LOW)
+            GPIO.output(LED_PIN_BLUE, GPIO.HIGH)
+        
+        elif start_capture and not capturing and not stop:
+            print("-----> START CAPTURE")
+            capturing = True
+            start_capture = False 
+
+            start_time = datetime.now().strftime('%y%m%d_%H%M%S')
+            directory = '/home/pi/ESO/Data'
+            gps_event_filename = f'{directory}/gpstime_event_log_{start_time}.csv'
+            rpi_event_filename = f'{directory}/shutter_event_log_{start_time}.csv'
+
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+
+            os.system(f"/home/pi/ESO/shell/run.sh {rpi_event_filename}")     
+            GPIO.output(LED_PIN_RED, GPIO.HIGH)
+            GPIO.output(LED_PIN_BLUE, GPIO.LOW)
+        
+        if run:
+            data = gps.readline()
+            if capturing and len(data) > 8 and data[0] == SYNC_1 and data[1] == SYNC_2 and data[2] == CLASS_ID and data[3] == MSG_ID:
+                log_gps_event(data, gps_event_filename)
+            
+            # data = data.decode('ascii').strip()
+            # fields = data.split(",")
+            if in_box(): #TODO Implement function!!
+            # if fields[0] == '$GNRMC' and is_location_in_kml_area(float(fieds[3])/100, float(fieds[5])/100, kml_path): #lat, lon
+                start_capture = not capturing
+            else:
+                stop = True
 
 except KeyboardInterrupt:
+    print("-----> SHUT DOWN")
     os.system("/home/pi/ESO/shell/stop.sh")
-    print("Program interrupted.")
-finally:
-    GPIO.cleanup()  # Ensures that GPIO pins are reset
+    GPIO.cleanup()
+
+except:
+    error = True
+    os.system("/home/pi/ESO/shell/stop.sh")
+    GPIO.output(LED_PIN_RED, GPIO.LOW)
+
+if error:
+    GPIO.output(LED_PIN_RED, GPIO.HIGH)
+    GPIO.output(LED_PIN_BLUE, GPIO.HIGH)

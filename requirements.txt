@@ -6,3 +6,6 @@ rainbow-logging-handler>=2.2.2
 six>=1.10.0
 ptpy >= 0.3.2
 libusb
+fastkml
+shapely
+pyproj

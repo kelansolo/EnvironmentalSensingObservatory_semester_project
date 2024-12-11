@@ -15,7 +15,7 @@ parser.add_argument('output_dir', type=str)
 args = parser.parse_args()
 event_filename = args.output_dir
 
-BUTTON_GPIO = 23
+BUTTON_GPIO = 25
 
 def signal_handler(sig, frame):
     GPIO.cleanup()
