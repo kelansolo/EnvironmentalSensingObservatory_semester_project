@@ -6,6 +6,8 @@ from datetime import datetime
 import argparse
 
 
+
+
 parser = argparse.ArgumentParser(
                     prog='EventLog',
                     description='Continously log the computertime of all the camera event pulses',

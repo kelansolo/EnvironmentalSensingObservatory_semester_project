@@ -10,3 +10,6 @@ Archive/
 .venv311/
 .venv312/
 env/
+Data/
+*.kml
+*.csv

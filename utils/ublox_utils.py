@@ -1,9 +1,11 @@
 
 import csv
-# from fastkml import kml
+from fastkml import kml
+from shapely.geometry import Point
 # from shapely.geometry import Point, Polygon
-# from shapely.geometry import shape
+from shapely.geometry import shape
 # import pyproj
+
 
 def decode_tow(tim_tm):
     # Extract the rising edge Time of Week (TOW)
@@ -57,3 +59,10 @@ def log_gps_event(data, filename):
     with open(filename, 'a', newline='') as log_file:
         writer = csv.writer(log_file)
         writer.writerow([tow])
+
+def dmm_to_decimal(dmm): # convert degreesminutes.minutes to degrees.degrees
+    degrees, minutes = str(float(dmm)/100).split(".")
+    degrees = float(degrees)
+    minutes = float(minutes[:2]+"."+minutes[2:])
+    return degrees + (minutes/60)
+
